@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const { StatusCodes } = require('http-status-codes')
 const cloudinary = require('cloudinary').v2;
 
-const productSchema = require('../models/productSchema')
+const productSchema = require('../models/ProductSchema')
 const CustomError = require('../errors')
 const fs = require('fs')
 const prisma = new PrismaClient()

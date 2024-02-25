@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  VENDOR
+  DRIVER
+  CUSTOMER
+}
+
+enum Gender {
+  Male
+  Female
+}
+
+model User {
+  id               String    @id @default(uuid())
+  number           String    @unique @db.VarChar(11)
+  password         String
+  full_name        String    @db.VarChar(100)
+  dob              DateTime?
+  gender           Gender?
+  role             Role
+  image            String?
+  verification_pin String
+  reset_pin        String?
+  isVerified       Boolean   @default(false)
+  verified         DateTime?
+  version          Int       @default(1)
+  // created_at        DateTime @default(now())
+  // modified_by       String
+  deleted          Boolean   @default(false)
+
+  Vendor      Vendor[]
+  UserAddress UserAddress[]
+  orderUser   Order[]       @relation(name: "orderUser")
+  orderDriver Order[]       @relation(name: "orderDriver")
+}
+
+model UserAddress {
+  id          Int     @id @default(autoincrement())
+  user_id     String
+  address     String  @db.VarChar(255)
+  longitude   Decimal
+  latitude    Decimal
+  description String?
+  is_primary  Boolean @default(false)
+
+  userId User @relation(fields: [user_id], references: [id])
+
+  Order Order[]
+}
+
+model Vendor {
+  id               String   @id @default(uuid())
+  user_id          String
+  vendor_name      String   @db.VarChar(255)
+  address          String   @db.VarChar(255)
+  longitude        Decimal?
+  latitude         Decimal?
+  discount         Int      @default(0) @db.Integer()
+  profile_image    String?
+  background_image String?
+  version          Int      @default(1)
+  deleted          Boolean  @default(false)
+
+  user User @relation(fields: [user_id], references: [id])
+
+  Product Product[]
+  Order   Order[]
+}
+
+model Product {
+  id          String  @id @default(uuid())
+  vendor_id   String
+  name        String  @db.VarChar(255)
+  description String  @db.VarChar(255)
+  price       Decimal
+  available   Boolean @default(true)
+  category    String
+  prep_time   Int
+  image       String?
+  version     Int     @default(1)
+  deleted     Boolean @default(false)
+
+  vendor Vendor @relation(fields: [vendor_id], references: [id])
+
+  OrderItem OrderItem[]
+}
+
+model Order {
+  id            Int       @id @default(autoincrement())
+  user_id       String
+  vendor_id     String
+  driver_id     String?
+  ordered_at    DateTime  @default(now())
+  status        String    @db.VarChar(25)
+  prep_time     Int
+  delivering_to Int
+  delivering_at DateTime?
+  total         Decimal
+  deleted       Boolean   @default(false)
+
+  user   User   @relation(fields: [user_id], references: [id], name: "orderUser")
+  vendor Vendor @relation(fields: [vendor_id], references: [id])
+  driver User?  @relation(fields: [driver_id], references: [id], name: "orderDriver")
+  UserAddress   UserAddress? @relation(fields: [delivering_to], references: [id])
+
+  OrderItem     OrderItem[]
+}
+
+model OrderItem {
+  id       String  @id @default(uuid())
+  order_id Int
+  item_id  String
+  quantity Int
+  total    Decimal
+
+  order   Order   @relation(fields: [order_id], references: [id])
+  product Product @relation(fields: [item_id], references: [id])
+}

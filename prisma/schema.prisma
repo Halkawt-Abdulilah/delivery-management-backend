@@ -8,24 +8,19 @@ datasource db {
 }
 
 enum Role {
+  SUPERADMIN
   ADMIN
   VENDOR
   DRIVER
   CUSTOMER
 }
 
-enum Gender {
-  Male
-  Female
-}
-
 model User {
   id               String    @id @default(uuid())
   number           String    @unique @db.VarChar(11)
   password         String
-  full_name        String    @db.VarChar(100)
-  dob              DateTime?
-  gender           Gender?
+  first_name       String    @db.VarChar(50)
+  last_name        String    @db.VarChar(50)
   role             Role
   image            String?
   verification_pin String
@@ -33,24 +28,28 @@ model User {
   isVerified       Boolean   @default(false)
   verified         DateTime?
   version          Int       @default(1)
-  // created_at        DateTime @default(now())
+  created_at       DateTime @default(now())
   // modified_by       String
   deleted          Boolean   @default(false)
 
-  Vendor      Vendor[]
-  UserAddress UserAddress[]
-  orderUser   Order[]       @relation(name: "orderUser")
-  orderDriver Order[]       @relation(name: "orderDriver")
+  Cart            Cart?
+  Vendor          Vendor[]
+  VendorRating    VendorRating[]
+  ProductRating   ProductRating[]
+  UserAddress     UserAddress[]
+  orderUser       Order[]       @relation(name: "orderUser")
+  orderDriver     Order[]       @relation(name: "orderDriver")
 }
 
 model UserAddress {
-  id          Int     @id @default(autoincrement())
-  user_id     String
-  address     String  @db.VarChar(255)
-  longitude   Decimal
-  latitude    Decimal
-  description String?
-  is_primary  Boolean @default(false)
+  id             Int     @id @default(autoincrement())
+  user_id        String
+  address        String  @db.VarChar(255)
+  longitude      Decimal @db.Decimal(9,2)
+  latitude       Decimal @db.Decimal(9,2)
+  description    String?
+  is_primary     Boolean @default(false)
+  created_at     DateTime @default(now())
 
   userId User @relation(fields: [user_id], references: [id])
 
@@ -62,18 +61,38 @@ model Vendor {
   user_id          String
   vendor_name      String   @db.VarChar(255)
   address          String   @db.VarChar(255)
-  longitude        Decimal?
-  latitude         Decimal?
+  delivery_time    Int?
+  prep_time        Int?
+  longitude        Decimal? @db.Decimal(9,2)
+  latitude         Decimal? @db.Decimal(9,2)
   discount         Int      @default(0) @db.Integer()
   profile_image    String?
   background_image String?
   version          Int      @default(1)
+  created_at       DateTime @default(now())
   deleted          Boolean  @default(false)
 
   user User @relation(fields: [user_id], references: [id])
 
   Product Product[]
+  VendorRating    VendorRating[]
   Order   Order[]
+}
+
+model VendorRating {
+  id          Int      @id @default(autoincrement())
+  user_id     String
+  vendor_id   String
+  rating      Decimal? @db.Decimal(9,2)
+
+  Vendor      Vendor   @relation(fields: [vendor_id], references: [id])
+  User        User     @relation(fields: [user_id], references: [id])
+}
+
+model VendorCategory {
+  id      String @id @default(uuid())
+  name    String
+  image   String
 }
 
 model Product {
@@ -81,17 +100,35 @@ model Product {
   vendor_id   String
   name        String  @db.VarChar(255)
   description String  @db.VarChar(255)
-  price       Decimal
+  price       Decimal @db.Decimal(9,2)
   available   Boolean @default(true)
   category    String
   prep_time   Int
   image       String?
   version     Int     @default(1)
+  created_at  DateTime @default(now())
   deleted     Boolean @default(false)
 
   vendor Vendor @relation(fields: [vendor_id], references: [id])
 
+  ProductRating ProductRating[]
   OrderItem OrderItem[]
+  CartItem CartItem[]
+}
+
+model ProductRating {
+  id          Int    @id @default(autoincrement())
+  user_id     String
+  product_id  String
+  rating      Decimal? @db.Decimal(9,2)
+
+  Product     Product   @relation(fields: [product_id], references: [id])
+  User        User      @relation(fields: [user_id], references: [id])
+}
+
+model ProductCategory {
+  id      String @id @default(uuid())
+  name    String
 }
 
 model Order {
@@ -104,7 +141,8 @@ model Order {
   prep_time     Int
   delivering_to Int
   delivering_at DateTime?
-  total         Decimal
+  total         Decimal @db.Decimal(9,2)
+  created_at    DateTime @default(now())
   deleted       Boolean   @default(false)
 
   user   User   @relation(fields: [user_id], references: [id], name: "orderUser")
@@ -116,12 +154,35 @@ model Order {
 }
 
 model OrderItem {
-  id       String  @id @default(uuid())
-  order_id Int
-  item_id  String
-  quantity Int
-  total    Decimal
+  id            Int  @id @default(autoincrement())
+  order_id      Int
+  item_id       String
+  quantity      Int
+  subtotal      Decimal @default(0) @db.Decimal(9,2)
+  created_at    DateTime @default(now())
 
   order   Order   @relation(fields: [order_id], references: [id])
   product Product @relation(fields: [item_id], references: [id])
+}
+
+model Cart {
+  id        String  @id @default(uuid())
+  user_id   String  @unique
+
+  User User  @relation(fields: [user_id], references: [id])
+
+  CartItem  CartItem[]
+}
+
+model CartItem {
+  id           String  @id @default(uuid())
+  cart_id      String
+  item_id      String
+  quantity     Int
+  subtotal     Decimal  @db.Decimal(9,2)
+  created_at   DateTime @default(now())
+  deleted      Boolean  @default(false)
+
+  Product      Product   @relation(fields: [item_id], references: [id])
+  cart         Cart      @relation(fields: [cart_id], references: [id])
 }

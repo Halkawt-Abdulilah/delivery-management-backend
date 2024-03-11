@@ -1,6 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
 const { StatusCodes } = require('http-status-codes')
-const cloudinary = require('cloudinary').v2;
 const CustomError = require('../errors');
 
 const { UserInfoSchema } = require('../models/UserSchema');
@@ -33,19 +32,13 @@ const getUserInfo = async (req, res) => {
 const changeUserImage = async (req, res) => {
 
     const { id } = req.params
+    const { url } = req.body
 
     try {
-        const result = await cloudinary.uploader.upload(req.files.image.tempFilePath, {
-            use_filename: false,
-            folder: 'profiles',
-            public_id: id,
-        });
-
-        fs.unlinkSync(req.files.image.tempFilePath)
 
         const updatedUserImage = await prisma.user.update({
             where: { id },
-            data: { image: result.secure_url }
+            data: { image: url }
         })
 
         res.status(StatusCodes.OK).json({ msg: 'Profile Picture changed successfuly' })
@@ -84,17 +77,11 @@ const getOwnUserInfo = async (req, res) => {
 
 const changeOwnImage = async (req, res) => {
 
+    const { url } = req.body
+
     try {
-        const result = await cloudinary.uploader.upload(req.files.image.tempFilePath, {
-            use_filename: false,
-            folder: 'profiles',
-            public_id: req.user.user_id,
-        });
-
-        fs.unlinkSync(req.files.image.tempFilePath)
-
         const updatedUserImage = await prisma.user.update({
-            where: { id: req.user.user_id }, data: { image: result.secure_url }
+            where: { id: req.user.user_id }, data: { image: url }
         })
 
         res.status(StatusCodes.OK).json({ msg: 'Profile Picture changed successfuly' })
@@ -107,10 +94,10 @@ const changeOwnImage = async (req, res) => {
 
 const updateOwnUserInfo = async (req, res) => {
 
-    const { fullName, dob, gender } = req.body
+    const { firstName, lastName, dob, gender } = req.body
 
     try {
-        const newInfo = UserInfoSchema.parse({ full_name: fullName, gender, dob })
+        const newInfo = UserInfoSchema.parse({ first_name: firstName, last_name: lastName })
 
 
         const updatedUserInfo = await prisma.user.update({
@@ -118,7 +105,7 @@ const updateOwnUserInfo = async (req, res) => {
             data: { ...newInfo }
         })
 
-        res.status(StatusCodes.OK).json({ msg: "Profile Information updated Successfuly" })
+        res.status(StatusCodes.OK).json({ msg: "Profile name updated Successfuly" })
 
     } catch (error) {
         res.status(StatusCodes.BAD_REQUEST).json(error.issues)

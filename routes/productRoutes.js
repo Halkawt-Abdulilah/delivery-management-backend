@@ -4,8 +4,8 @@ const router = express.Router()
 const { createProduct, getAllProducts, getSingleProduct, updateProduct, deleteProduct, getVendorProducts, getOwnVendorProducts, userSearch, createOwnVendorProduct, } = require('../controllers/productController')
 const { authenticateUser, authorizePermissions } = require('../middlewares/authentication')
 
-router.get('/products', authenticateUser, authorizePermissions('ADMIN'), getAllProducts)
-router.post('/products/create', authenticateUser, authorizePermissions('ADMIN'), createProduct)
+router.get('/products', authenticateUser, authorizePermissions('SUPERADMIN', 'ADMIN'), getAllProducts)
+router.post('/products/create', authenticateUser, authorizePermissions('SUPERADMIN', 'ADMIN'), createProduct)
 
 router.get('/vendor/products', authenticateUser, authorizePermissions('VENDOR'), getOwnVendorProducts)
 router.post('/vendor/products/create', authenticateUser, authorizePermissions('VENDOR'), createOwnVendorProduct)

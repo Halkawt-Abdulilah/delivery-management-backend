@@ -3,6 +3,101 @@ const { StatusCodes } = require('http-status-codes')
 
 const prisma = new PrismaClient()
 
+const createOrderNew = async (req, res) => {
+
+    const { address } = req.body
+
+    try {
+        const cartItems = await prisma.cartItem.findMany({
+            where: {
+                cart: {
+                    user_id: req.user.user_id
+                },
+                deleted: false,
+            },
+            include: {
+                Product: {
+                    include: {
+                        vendor: true,
+                    },
+                },
+            },
+        });
+
+        const { discount, delivery_time, id } = cartItems[0].Product.vendor
+
+        let total = 0
+        let prepareTime = 0
+
+        cartItems.forEach((item) => {
+            total += Number.parseInt(item.subtotal)
+            if (prepareTime < item.Product.prep_time) {
+                prepareTime = item.Product.prep_time
+            }
+
+        })
+
+        // console.log(id)
+        const order = await prisma.order.create({
+            data: {
+                user_id: req.user.user_id,
+                vendor_id: id,
+                status: "pending",
+                prep_time: prepareTime,
+                delivering_to: address,
+                delivering_at: new Date(Date.now() + delivery_time * 60000),
+                total,
+            }
+        })
+
+        let orderItems = []
+        cartItems.forEach((item) => {
+            orderItems.push({
+                order_id: order.id,
+                item_id: item.item_id,
+                quantity: item.quantity,
+                subtotal: item.subtotal,
+            })
+        })
+
+
+        const orderItemsTransferred = await prisma.orderItem.createMany({
+            data: orderItems
+        })
+
+        const cartItemsDeleted = await prisma.cartItem.updateMany({
+            where: {
+                OR: cartItems.map(item => ({ id: item.id })),
+            },
+            data: {
+                deleted: {
+                    set: true,
+                },
+            }
+        })
+
+        res.status(200).json({ msg: "order created" })
+
+        // const userCartItems = await prisma.cartItem.findMany({
+        //     where: {
+        //         cart: {
+        //             user_id: req.user.user_id
+        //         }
+        //     }
+        // })
+
+        // const vendorInfo = await prisma.vendor.findFirst({
+        //     where: {
+        //         Product: {
+
+        //         }
+        //     }
+        // })
+    } catch (error) {
+        throw error
+    }
+}
+
 const createOrder = async (req, res) => {
     // expecting total, delivery fee, address_id, and order items
     // items: [{item_id, quantity, total}]
@@ -17,7 +112,7 @@ const createOrder = async (req, res) => {
             select: { vendor_id: true }
         })
 
-        // TODO: check longestPrepTime, looks kind of buggy
+        // TODO: check longestPrepTime
         // const longestPrepTimeQuery = `FROM Product SELECT prep_time WHERE id in $`
 
         const longestPrepTime = await prisma.product.findMany({
@@ -322,6 +417,7 @@ const delayOrderDeliveryTime = async (req, res) => {
 
 module.exports = {
     createOrder,
+    createOrderNew,
     getSingleOrder,
     getAllOrders,
     getUserOrders,

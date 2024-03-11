@@ -1,6 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
 const { StatusCodes } = require('http-status-codes')
-const cloudinary = require('cloudinary').v2;
 
 const productSchema = require('../models/ProductSchema')
 const CustomError = require('../errors')
@@ -12,24 +11,23 @@ const prisma = new PrismaClient()
 // -------  CRUD  -------
 
 const createProduct = async (req, res) => {
-    const { name, description, price, prepTime, vendorId } = req.body
+    const { name, description, price, prepTime, category, vendorId, image } = req.body
     try {
         const validatedProduct = productSchema.parse({ name, description, price, prep_time: prepTime })
 
-
-        const uploadedProductImage = await cloudinary.uploader.upload(req.files.image.tempFilePath, {
-            use_filename: false,
-            folder: 'products',
-            public_id: `${req.user.vendor_name}_${name}`,
-        });
-
-        fs.unlinkSync(req.files.image.tempFilePath)
-
-        const product = await prisma.product.create({ data: { ...validatedProduct, vendor_id: vendorId, image: uploadedProductImage.secure_url } })
+        const product = await prisma.product.create({
+            data: {
+                ...validatedProduct,
+                category: category,
+                vendor_id: vendorId,
+                image
+            }
+        })
 
         res.status(StatusCodes.OK).json(product)
+
     } catch (error) {
-        res.status(StatusCodes.BAD_REQUEST).json(error.issues)
+        throw error
     }
 }
 
@@ -101,31 +99,16 @@ const getOwnVendorProducts = async (req, res) => {
 
 const createOwnVendorProduct = async (req, res) => {
 
-    const { name, description, price, prepTime, category } = req.body
+    const { name, description, price, prepTime, category, url } = req.body
     try {
 
         const validatedProduct = productSchema.parse({ name, description, price: parseInt(price), prep_time: parseInt(prepTime), })
-
-        let secureUrl
-
-        if (req.files.image.tempFilePath) {
-
-            const uploadedProductImage = await cloudinary.uploader.upload(req.files.image.tempFilePath, {
-                use_filename: false,
-                folder: 'products',
-                public_id: `${req.user.vendor_name}_${name}`,
-            });
-
-            fs.unlinkSync(req.files.image.tempFilePath)
-
-            secureUrl = uploadedProductImage.secure_url
-        }
 
         const product = await prisma.product.create({
             data: {
                 ...validatedProduct,
                 vendor_id: req.user.vendor_id,
-                image: secureUrl,
+                image: url,
                 category
             }
         })

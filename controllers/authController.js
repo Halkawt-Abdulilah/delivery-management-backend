@@ -5,7 +5,6 @@ const CustomError = require('../errors');
 const { UserSchema } = require('../models/UserSchema');
 const { encryptInput, compareInput, generatePin } = require('../utils/bcrypt');
 const { createJWT } = require('../utils/jwt');
-const { date } = require('zod');
 
 const prisma = new PrismaClient()
 
@@ -42,29 +41,31 @@ const login = async (req, res) => {
                 vendor_id: vendor.id,
                 vendor_name: vendor.vendor_name,
                 number: user.number,
-                full_name: user.full_name,
+                jfirst_name: user.first_name,
+                last_name: user.last_name,
                 role: user.role,
             }
         })
 
-        return res.status(StatusCodes.OK).json({ token, expiresIn: tokenTimestamp })
+        return res.status(StatusCodes.OK).json({ token, role: user.role, expiresIn: tokenTimestamp })
     }
 
     const token = createJWT({
         payload: {
             user_id: user.id,
             number: user.number,
-            full_name: user.full_name,
+            first_name: user.first_name,
+            last_name: user.last_name,
             role: user.role,
         }
     })
 
-    return res.status(StatusCodes.OK).json({ token, expiresIn: tokenTimestamp })
+    return res.status(StatusCodes.OK).json({ token, role: user.role, expiresIn: tokenTimestamp })
 }
 
 // TODO: fix errors not "reaching" error handler middleware
 const registerUser = async (req, res) => {
-    const { fullName, number, password, passwordConfirm, role } = req.body
+    const { firstName, lastName, number, password, passwordConfirm, role } = req.body
 
     const numberExists = await prisma.user.findUnique({
         where: {
@@ -81,7 +82,7 @@ const registerUser = async (req, res) => {
     }
 
     try {
-        const validatedUser = UserSchema.parse({ number, full_name: fullName, password, role })
+        const validatedUser = UserSchema.parse({ number, first_name: firstName, last_name: lastName, password, role })
 
         const hashedPassword = await encryptInput(password)
         const pin = generatePin()
@@ -95,11 +96,19 @@ const registerUser = async (req, res) => {
             }
         })
 
+        if (role === "CUSTOMER") {
+            const result = await prisma.cart.create({
+                data: {
+                    user_id: user.id
+                }
+            })
+        }
+
         // TODO: send pin through SMS
         console.log(pin);
 
         // res.status(StatusCodes.CREATED).json({ msg: user })
-        res.status(StatusCodes.CREATED).json({ msg: 'Account created successfuly!' })
+        res.status(StatusCodes.CREATED).json({ msg: 'Account created successfuly!', pin })
 
     } catch (error) {
         res.status(StatusCodes.BAD_REQUEST).json(error.issues)
@@ -108,7 +117,7 @@ const registerUser = async (req, res) => {
 
 const registerCustomer = async (req, res) => {
     req.body.role = 'CUSTOMER'
-    registerUser(req, res)
+    await registerUser(req, res)
 }
 
 const registerVendor = async (req, res) => {
@@ -118,6 +127,11 @@ const registerVendor = async (req, res) => {
 
 const registerDriver = async (req, res) => {
     req.body.role = 'DRIVER'
+    registerUser(req, res)
+}
+
+const registerAdmin = async (req, res) => {
+    req.body.role = 'ADMIN'
     registerUser(req, res)
 }
 
@@ -187,6 +201,49 @@ const resendVerificationPin = async (req, res) => {
 
 }
 
+const serverInitialize = async (req, res) => {
+    const { secret, firstName, lastName, number, password, passwordConfirm } = req.body
+
+    if (secret != process.env.INIT_SECRET) {
+        throw new CustomError.UnauthorizedError("Unauthorized")
+    }
+
+    const superAdminInitialized = await prisma.user.findFirst({
+        where: {
+            role: "SUPERADMIN"
+        }
+    })
+
+    if (superAdminInitialized) {
+        throw new CustomError.BadRequestError("Superadmin already exists")
+    }
+
+    if (!password == passwordConfirm) {
+        throw new CustomError.BadRequestError("Passwords do not match")
+    }
+
+    try {
+        const validatedUser = UserSchema.parse({ number, first_name: firstName, last_name: lastName, password, role: "SUPERADMIN" })
+
+        const hashedPassword = await encryptInput(password)
+
+        const user = await prisma.user.create({
+            data: {
+                ...validatedUser,
+                password: hashedPassword,
+                verification_pin: "",
+                isVerified: true,
+                verified: new Date(Date.now()),
+            }
+        })
+
+        res.status(StatusCodes.CREATED).json({ msg: 'Admin registered successfuly' })
+
+    } catch (error) {
+        throw error
+    }
+
+}
 
 
 module.exports = {
@@ -194,6 +251,8 @@ module.exports = {
     registerCustomer,
     registerVendor,
     registerDriver,
+    registerAdmin,
     verifyNumber,
     resendVerificationPin,
+    serverInitialize,
 }

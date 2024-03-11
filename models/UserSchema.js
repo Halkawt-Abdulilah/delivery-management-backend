@@ -1,7 +1,6 @@
 const { z } = require('zod');
 
-const genders = ["Male", "Female"]
-const roles = ["ADMIN", "VENDOR", "DRIVER", "CUSTOMER"]
+const roles = ["ADMIN", "VENDOR", "DRIVER", "CUSTOMER", "SUPERADMIN"]
 
 const numberSchema = z.string().min(11).refine((number) => {
     if (isNaN(Number(number)))
@@ -11,23 +10,6 @@ const numberSchema = z.string().min(11).refine((number) => {
     message: 'Invalid Phone Number'
 })
 
-const fullNameSchema = z.string().refine((name) => {
-    const parts = name.split(' ');
-
-    // Basic validation: at least first and last name separated by space
-    if (parts.length < 2) {
-        return false;
-    }
-
-    const minPartLength = 2; // Adjust as needed
-    if (parts.some((part) => part.length < minPartLength)) {
-        return false;
-    }
-
-    return true;
-}, {
-    message: 'Invalid full name. Please provide first and last name separated by spaces, with each part having at least 2 characters',
-});
 
 const longitudeSchema = z.string().refine((value) => {
     if (isNaN(Number(value)) || value < -180 || value > 180) {
@@ -50,14 +32,14 @@ const latitudeSchema = z.string().refine((value) => {
 const UserSchema = z.object({
     number: numberSchema,
     password: z.string().min(8, { message: 'Password must be at least 8 characters long' }),
-    full_name: fullNameSchema,
+    first_name: z.string().min(1, { message: 'invalid first name' }),
+    last_name: z.string().min(1, { message: 'invalid last name' }),
     role: z.enum(roles),
 })
 
 const UserInfoSchema = z.object({
-    full_name: fullNameSchema.optional(),
-    gender: z.enum(genders).optional(),
-    dob: z.date().optional(),
+    first_name: z.string().min(1, { message: 'invalid first name' }).optional(),
+    last_name: z.string().min(1, { message: 'invalid last name' }).optional(),
 })
 
 module.exports = {

@@ -2,14 +2,14 @@ const express = require('express')
 const router = express.Router()
 
 const { authenticateUser, authorizePermissions } = require('../middlewares/authentication')
-const { createOrder, getUserOrders, getDriverOrders, getVendorOrders, getOwnUserOrders, getOwnDriverOrders, getOwnVendorOrders, acceptOrder, rejectOrder, deliverOrder, finalizeOrderDelivery, delayOrderDeliveryTime, getAllOrders, getSingleOrder, getAvailableOrders, createOrderNew } = require('../controllers/orderController')
+const { getOwnUserOrders, getOwnDriverOrders, getOwnVendorOrders, acceptOrder, rejectOrder, deliverOrder, finalizeOrderDelivery, delayOrderDeliveryTime, getAllOrders, getSingleOrder, getAvailableOrders, createOrderNew } = require('../controllers/orderController')
 
 
 router.get('/orders/:id', authenticateUser, authorizePermissions('ADMIN', 'VENDOR', 'DRIVER'), getSingleOrder)
 router.get('/admin/orders', authenticateUser, authorizePermissions('SUPERADMIN', 'ADMIN'), getAllOrders)
 
-router.post('/user/orders/create', authenticateUser, authorizePermissions('CUSTOMER'), createOrder)
-router.post('/user/orders/create/new', authenticateUser, authorizePermissions('CUSTOMER'), createOrderNew)
+router.post('/user/orders/create', authenticateUser, authorizePermissions('CUSTOMER'), createOrderNew)
+// router.post('/user/orders/create/new', authenticateUser, authorizePermissions('CUSTOMER'), createOrderNew)
 router.get('/user/orders', authenticateUser, authorizePermissions('CUSTOMER'), getOwnUserOrders)
 
 router.get('/vendor/orders', authenticateUser, authorizePermissions('VENDOR'), getOwnVendorOrders)

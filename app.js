@@ -1,6 +1,7 @@
 require('dotenv').config();
 require('express-async-errors')
 const cors = require('cors')
+const winston = require('winston')
 
 const express = require('express')
 const app = express()
@@ -15,7 +16,14 @@ cloudinary.config({
     api_secret: process.env.CLOUD_API_SECRET,
 })
 
-
+const logger = winston.createLogger({
+    level: 'info', // Change to 'debug' for more detailed logs
+    format: winston.format.json(),
+    transports: [
+        new winston.transports.Console(),
+        new winston.transports.File({ filename: 'activity.log' })
+    ]
+});
 
 //others
 const morgan = require('morgan')
@@ -43,6 +51,18 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const notFoundMiddleware = require('./middlewares/not-found');
 const errorHandlerMiddleware = require('./middlewares/error-handler');
 
+
+app.use((req, res, next) => {
+    const message = {
+        timestamp: Date.now(),
+        method: req.method,
+        url: req.url,
+        // userAgent: req.headers['user-agent'],
+        ip: req.ip,
+    };
+    logger.info(message);
+    next();
+});
 
 app.use('/api/v1', authRoutes)
 app.use('/api/v1', uploadRoutes)

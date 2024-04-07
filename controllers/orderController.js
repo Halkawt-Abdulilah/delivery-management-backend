@@ -5,7 +5,7 @@ const prisma = new PrismaClient()
 
 const createOrderNew = async (req, res) => {
 
-    const { address } = req.body
+    const { address_id } = req.body
 
     try {
         const cartItems = await prisma.cartItem.findMany({
@@ -38,22 +38,29 @@ const createOrderNew = async (req, res) => {
         })
 
         // console.log(id)
-        const order = await prisma.order.create({
+        const orderCreated = await prisma.order.create({
             data: {
-                user_id: req.user.user_id,
-                vendor_id: id,
+                user: {
+                    connect: { id: req.user.user_id }
+                },
+                vendor: {
+                    connect: { id }
+                },
                 status: "pending",
                 prep_time: prepareTime,
-                delivering_to: address,
-                delivering_at: new Date(Date.now() + delivery_time * 60000),
+                // delivering_at: new Date(Date.now() + delivery_time * 60000),
+                UserAddress: {
+                    connect: { id: address_id}
+                },
                 total,
             }
-        })
+
+        });
 
         let orderItems = []
         cartItems.forEach((item) => {
             orderItems.push({
-                order_id: order.id,
+                order_id: orderCreated.id,
                 item_id: item.item_id,
                 quantity: item.quantity,
                 subtotal: item.subtotal,
@@ -77,22 +84,6 @@ const createOrderNew = async (req, res) => {
         })
 
         res.status(200).json({ msg: "order created" })
-
-        // const userCartItems = await prisma.cartItem.findMany({
-        //     where: {
-        //         cart: {
-        //             user_id: req.user.user_id
-        //         }
-        //     }
-        // })
-
-        // const vendorInfo = await prisma.vendor.findFirst({
-        //     where: {
-        //         Product: {
-
-        //         }
-        //     }
-        // })
     } catch (error) {
         throw error
     }

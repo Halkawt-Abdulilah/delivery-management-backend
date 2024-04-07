@@ -23,6 +23,10 @@ const login = async (req, res) => {
         throw new CustomError.UnauthenticatedError('Invalid Credentials')
     }
 
+    if (!user.isVerified) {
+        throw new CustomError.BadRequestError('Account not verified')
+    }
+
     const isPasswordCorrect = await compareInput(password, user.password)
     if (!isPasswordCorrect) {
         throw new CustomError.UnauthenticatedError('Invalid Credentials')

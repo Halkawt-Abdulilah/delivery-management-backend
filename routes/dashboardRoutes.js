@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const { authenticateUser, authorizePermissions } = require('../middlewares/authentication')
-const { dashboardLogin, dashboardHomeInfo, dashboardProfileInfo, dashboardProfileUpdateGeneralInfo, dashboardProfileUpdatePassword, dashboardFetchUsers, dashboardUpdateUser, dashboardCreateUser, dashboardDeleteUser, dashboardFetchVendors, dashboardUpdateVendor, dashboardCreateVendor, dashboardDeleteVendor, dashboardFetchOrders, dashboardUpdateOrder, dashboardFetchProducts, dashboardUpdateProduct, dashboardCreateProduct, dashboardDeleteProduct } = require('../controllers/dashboardController')
+const { dashboardLogin, dashboardHomeInfo, dashboardProfileInfo, dashboardProfileUpdateGeneralInfo, dashboardProfileUpdatePassword, dashboardFetchUsers, dashboardUpdateUser, dashboardCreateUser, dashboardDeleteUser, dashboardFetchVendors, dashboardUpdateVendor, dashboardCreateVendor, dashboardDeleteVendor, dashboardFetchOrders, dashboardUpdateOrder, dashboardFetchProducts, dashboardUpdateProduct, dashboardCreateProduct, dashboardDeleteProduct, fetchEntities, dashboardFetchReportOrders } = require('../controllers/dashboardController')
 const { uploadVendorProfile, uploadVendorBackground, uploadUserProfile, uploadVendorProductImage } = require('../controllers/uploadController')
 
 router.post('/login', dashboardLogin)
@@ -32,4 +32,7 @@ router.post('/products/create', authenticateUser, authorizePermissions('SUPERADM
 router.patch('/products/:id/update', authenticateUser, authorizePermissions('SUPERADMIN', 'ADMIN'), dashboardUpdateProduct)
 router.delete('/products/:id/delete', authenticateUser, authorizePermissions('SUPERADMIN', 'ADMIN'), dashboardDeleteProduct)
 
+// reports
+router.get('/reports/entities', authenticateUser, authorizePermissions('SUPERADMIN', 'ADMIN'), fetchEntities)
+router.post('/reports/orders', authenticateUser, authorizePermissions('SUPERADMIN', 'ADMIN'), dashboardFetchReportOrders)
 module.exports = router

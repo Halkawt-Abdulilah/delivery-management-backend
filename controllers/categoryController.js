@@ -8,7 +8,7 @@ const fetchVendorCategories = async (req, res) => {
     try {
         const result = await prisma.vendorCategory.findMany({})
 
-        res.status(StatusCodes.OK).json({result})
+        res.status(StatusCodes.OK).json({ result })
 
     } catch (error) {
         throw error
@@ -18,7 +18,10 @@ const fetchProductCategories = async (req, res) => {
     try {
         const result = await prisma.productCategory.findMany({})
 
-        res.status(StatusCodes.OK).json({ result })
+        let categories = []
+        result.forEach((item) => categories.push(item.name))
+
+        res.status(StatusCodes.OK).json({ categories })
 
     } catch (error) {
         throw error

@@ -45,7 +45,10 @@ const dashboardLogin = async (req, res) => {
         }
     })
 
-    return res.status(StatusCodes.OK).json({ user: userInfo, token })
+    const cookieString = `${"auth"}=${token}; Path=/`;
+
+    res.header('Set-Cookie', cookieString)
+    return res.status(StatusCodes.OK).json({ user: userInfo, token, login: true })
 }
 
 const dashboardHomeInfo = async (req, res) => {
@@ -713,7 +716,7 @@ const dashboardDeleteProduct = async (req, res) => {
 
 // -----------------------------------------------------
 
-const fetchEntities = async (req, res) => {
+const fetchCustomerEntities = async (req, res) => {
 
     const customers = await prisma.user.findMany({
         where: {
@@ -727,6 +730,13 @@ const fetchEntities = async (req, res) => {
         }
     })
 
+
+
+    res.status(StatusCodes.OK).json({ customers })
+}
+
+const fetchDriverEntities = async (req, res) => {
+
     const drivers = await prisma.user.findMany({
         where: {
             role: Role['DRIVER'],
@@ -739,6 +749,11 @@ const fetchEntities = async (req, res) => {
         }
     })
 
+    res.status(StatusCodes.OK).json({ drivers })
+}
+
+const fetchVendorEntities = async (req, res) => {
+
     const vendors = await prisma.vendor.findMany({
         where: {
             deleted: false
@@ -749,12 +764,15 @@ const fetchEntities = async (req, res) => {
         }
     })
 
-    res.status(StatusCodes.OK).json({ customers, drivers, vendors })
+    res.status(StatusCodes.OK).json({ vendors })
 }
 
+
 const dashboardFetchReportOrders = async (req, res) => {
-    const { sortBy, sort, limit, } = req.query
+    const { sortBy, sort, limit, page} = req.query
     const { customer, driver, vendor, status, from, to } = req.body
+
+    const offset = (page - 1) * limit
 
     let beginning
     let ending
@@ -765,8 +783,79 @@ const dashboardFetchReportOrders = async (req, res) => {
     if (to)
         ending = new Date(to)
 
-    console.log("from date: ", beginning);
-    console.log("typeof(from date): ", typeof (beginning));
+    try {
+        let orderBy = {}
+        if (sortBy) {
+            orderBy = {
+                [sortBy]: sort === 'desc' ? 'desc' : 'asc'
+            }
+        }
+
+        const counter = await prisma.order.count({
+            where: {
+                user_id: customer,
+                driver_id: driver,
+                vendor_id: vendor,
+                ordered_at: {
+                    gte: from ? new Date(from) : undefined,
+                    lte: to ? new Date(to) : undefined,
+                },
+                status,
+                deleted: false
+            },
+            orderBy,
+        })
+
+        const result = await prisma.order.findMany({
+            skip: offset,
+            take: Number.parseFloat(limit),
+            where: {
+                user_id: customer,
+                driver_id: driver,
+                vendor_id: vendor,
+                ordered_at: {
+                    gte: from ? new Date(from) : undefined,
+                    lte: to ? new Date(to) : undefined,
+                },
+                status,
+                deleted: false
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        first_name: true,
+                        last_name: true,
+                    }
+                },
+                vendor: {
+                    select: {
+                        vendor_name: true
+                    }
+                },
+                driver: {
+                    select: {
+                        id: true,
+                        first_name: true,
+                        last_name: true,
+                    }
+                },
+            },
+            orderBy,
+        })
+
+        const maxPages = Math.ceil(counter / Number.parseFloat(limit))
+        return res.status(StatusCodes.OK).json({ result, pages: maxPages })
+
+    } catch (error) {
+        throw error
+    }
+}
+
+const fetchOrderExport = async (req, res) => {
+
+    const { sortBy, sort } = req.query
+    const { customer, driver, vendor, status, from, to } = req.body
 
     try {
         let orderBy = {}
@@ -812,23 +901,13 @@ const dashboardFetchReportOrders = async (req, res) => {
             orderBy,
         })
 
-        if (result) {
-            console.log("new date: ", new Date());
-            console.log("returned: ", result[0]?.created_at)
-            console.log("typeof(retunred): ", typeof (result[0]?.created_at))
-            console.log("gte date less than returned field: ", beginning < result[0]?.created_at)
-            console.log("result length: ", result.length);
-        }
-
-        const maxPages = Math.ceil(result.length / Number.parseFloat(limit))
-        return res.status(StatusCodes.OK).json({ result, pages: maxPages })
+        return res.status(StatusCodes.OK).json({ result })
 
     } catch (error) {
         throw error
     }
+
 }
-
-
 
 module.exports = {
     dashboardLogin,
@@ -856,6 +935,9 @@ module.exports = {
     dashboardUpdateProduct,
     dashboardDeleteProduct,
 
-    fetchEntities,
-    dashboardFetchReportOrders
+    fetchCustomerEntities,
+    fetchDriverEntities,
+    fetchVendorEntities,
+    dashboardFetchReportOrders,
+    fetchOrderExport,
 }

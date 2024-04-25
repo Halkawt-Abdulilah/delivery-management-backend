@@ -1,10 +1,15 @@
 require('dotenv').config();
 require('express-async-errors')
-const cors = require('cors')
-const winston = require('winston')
-
 const express = require('express')
 const app = express()
+
+const cors = require('cors');
+const morgan = require('morgan');
+const xss = require('xss-clean');
+const winston = require('winston');
+const rateLimiter = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+
 const port = process.env.PORT || 5000
 
 const fileUpload = require('express-fileupload')
@@ -17,7 +22,7 @@ cloudinary.config({
 })
 
 const logger = winston.createLogger({
-    level: 'info', // Change to 'debug' for more detailed logs
+    level: 'info',
     format: winston.format.json(),
     transports: [
         new winston.transports.Console(),
@@ -25,14 +30,21 @@ const logger = winston.createLogger({
     ]
 });
 
-//others
-const morgan = require('morgan')
 
+app.use(
+    rateLimiter({
+        windowMs: 15 * 60 * 1000,
+        max: 100,
+    })
+);
+app.use(helmet());
+app.use(xss());
+app.use(mongoSanitize());
 app.use(morgan('tiny'))
 app.use(express.json())
 app.use(fileUpload({ useTempFiles: true }))
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'http://localhost:3000'],
     credentials: true
 }));
 

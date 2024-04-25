@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const { authenticateUser, authorizePermissions } = require('../middlewares/authentication')
-const { dashboardLogin, dashboardHomeInfo, dashboardProfileInfo, dashboardProfileUpdateGeneralInfo, dashboardProfileUpdatePassword, dashboardFetchUsers, dashboardUpdateUser, dashboardCreateUser, dashboardDeleteUser, dashboardFetchVendors, dashboardUpdateVendor, dashboardCreateVendor, dashboardDeleteVendor, dashboardFetchOrders, dashboardUpdateOrder, dashboardFetchProducts, dashboardUpdateProduct, dashboardCreateProduct, dashboardDeleteProduct, fetchEntities, dashboardFetchReportOrders } = require('../controllers/dashboardController')
+const { dashboardLogin, dashboardHomeInfo, dashboardProfileInfo, dashboardProfileUpdateGeneralInfo, dashboardProfileUpdatePassword, dashboardFetchUsers, dashboardUpdateUser, dashboardCreateUser, dashboardDeleteUser, dashboardFetchVendors, dashboardUpdateVendor, dashboardCreateVendor, dashboardDeleteVendor, dashboardFetchOrders, dashboardUpdateOrder, dashboardFetchProducts, dashboardUpdateProduct, dashboardCreateProduct, dashboardDeleteProduct, dashboardFetchReportOrders, fetchCustomerEntities, fetchDriverEntities, fetchVendorEntities, fetchOrderExport } = require('../controllers/dashboardController')
 const { uploadVendorProfile, uploadVendorBackground, uploadUserProfile, uploadVendorProductImage } = require('../controllers/uploadController')
 
 router.post('/login', dashboardLogin)
@@ -33,6 +33,9 @@ router.patch('/products/:id/update', authenticateUser, authorizePermissions('SUP
 router.delete('/products/:id/delete', authenticateUser, authorizePermissions('SUPERADMIN', 'ADMIN'), dashboardDeleteProduct)
 
 // reports
-router.get('/reports/entities', authenticateUser, authorizePermissions('SUPERADMIN', 'ADMIN'), fetchEntities)
+router.get('/reports/entities/customer', authenticateUser, authorizePermissions('SUPERADMIN', 'ADMIN'), fetchCustomerEntities)
+router.get('/reports/entities/driver', authenticateUser, authorizePermissions('SUPERADMIN', 'ADMIN'), fetchDriverEntities)
+router.get('/reports/entities/vendor', authenticateUser, authorizePermissions('SUPERADMIN', 'ADMIN'), fetchVendorEntities)
 router.post('/reports/orders', authenticateUser, authorizePermissions('SUPERADMIN', 'ADMIN'), dashboardFetchReportOrders)
+router.post('/reports/orders/export', authenticateUser, authorizePermissions('SUPERADMIN', 'ADMIN'), fetchOrderExport)
 module.exports = router
